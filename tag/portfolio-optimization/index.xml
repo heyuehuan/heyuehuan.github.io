@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Portfolio Optimization | Yuehuan He</title>
+    <link>https://www.heyuehuan.com/tag/portfolio-optimization/</link>
+      <atom:link href="https://www.heyuehuan.com/tag/portfolio-optimization/index.xml" rel="self" type="application/rss+xml" />
+    <description>Portfolio Optimization</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 08 May 2023 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https://www.heyuehuan.com/media/icon_hud37bb86038149fec507f43a2191faf18_50875_512x512_fill_lanczos_center_3.png</url>
+      <title>Portfolio Optimization</title>
+      <link>https://www.heyuehuan.com/tag/portfolio-optimization/</link>
+    </image>
+    
+    <item>
+      <title>Optimization-based tail risk hedging of the S&amp;P 500 index</title>
+      <link>https://www.heyuehuan.com/publication/tail-risk-hedging-sp500/</link>
+      <pubDate>Mon, 08 May 2023 00:00:00 +0000</pubDate>
+      <guid>https://www.heyuehuan.com/publication/tail-risk-hedging-sp500/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Optimization-based Tail Risk Hedging</title>
+      <link>https://www.heyuehuan.com/publication/masc-thesis-tail-risk-hedge/</link>
+      <pubDate>Mon, 01 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://www.heyuehuan.com/publication/masc-thesis-tail-risk-hedge/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

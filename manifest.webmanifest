@@ -1,0 +1,18 @@
+{
+  "name": "Yuehuan He",
+  "short_name": "Yuehuan He",
+  "lang": "en-us",
+  "theme_color": "#1565c0",
+  "background_color": "#1565c0",
+  "icons": [{
+    "src": "/media/icon_hud37bb86038149fec507f43a2191faf18_50875_192x192_fill_lanczos_center_3.png",
+    "sizes": "192x192",
+    "type": "image/png"
+    }, {
+    "src": "/media/icon_hud37bb86038149fec507f43a2191faf18_50875_512x512_fill_lanczos_center_3.png",
+    "sizes": "512x512",
+    "type": "image/png"
+     }],
+  "display": "standalone",
+  "start_url": "/?utm_source=web_app_manifest"
+}
