@@ -1,0 +1,42 @@
+---json
+{ "layout": "base.njk" }
+---
+    <article class="article">
+
+<div class="article-container pt-3">
+  <h1>{{ titleHtml }}</h1>
+
+  <p class="page-subtitle">{{ subtitle }}</p>
+
+<div class="article-metadata">
+
+  <div>
+  {{ authors | authorSpans }}
+  </div>
+
+  <span class="article-date">
+          Last updated on
+    {{ lastmod | mdy }}
+  </span>
+
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    {{ readingTime }} min read
+  </span>
+
+</div>
+</div>
+
+  <div class="article-container">
+
+    <div class="article-style">
+      {{ content }}
+    </div>
+
+{% shareBox titlePlain, page.url %}
+
+{% include "parts/author-card.html" %}
+
+  </div>
+</article>
+  </div>
