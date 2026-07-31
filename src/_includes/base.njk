@@ -1,0 +1,5 @@
+{% include "parts/head-top.html" %}{% include metaFile %}</head>
+
+
+{{ bodyLine | safe }}
+{% include (chromeFile if chromeFile else ("parts/chrome-home.html" if isHome else "parts/chrome.html")) %}{% include contentFile %}{% include (footerFile if footerFile else ("parts/footer-home.html" if isHome else "parts/footer.html")) %}
