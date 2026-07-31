@@ -1,5 +1,0 @@
-{% include "parts/head-top.html" %}{% include metaFile or "meta-gen.njk" %}</head>
-
-
-{% if bodyLine %}{{ bodyLine }}{% else %}<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " {% if wcPageId %}data-wc-page-id="{{ wcPageId }}" {% else %} {% endif %}>{% endif %}
-{% include chromeFile or ("parts/chrome-home.html" if isHome else "parts/chrome.html") %}{% if contentFile %}{% include contentFile %}{% else %}{{ content }}{% endif %}{% include footerFile or ("parts/footer-home.html" if isHome else "parts/footer.html") %}
