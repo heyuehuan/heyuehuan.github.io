@@ -6,6 +6,8 @@ eleventy.config.js
 package.json
 package-lock.json
 deploy.sh
+test/
+tools/
 
 # OS junk
 .DS_Store

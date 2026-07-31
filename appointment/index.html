@@ -1,0 +1,827 @@
+<!doctype html>
+<!--
+  Local copy of the booking card served by the appointment service. Do not
+  edit by hand: run `node tools/sync-appointment-card.js` to refresh it from
+  https://api.heyuehuan.com/appointment/book, which re-applies the
+  four local edits (absolute window.BOOT.base, ?theme= support, the site's
+  icons, this note). The hosted page cannot be iframed — it sends
+  frame-ancestors 'none' — so the homepage overlay frames this copy instead.
+-->
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Request a meeting · Yuehuan</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bg: #f5f5f7; --card: #ffffff; --ink: #1d1d1f; --muted: #6e6e73;
+  --line: #d2d2d7; --hairline: #e8e8ed;
+  --blue: #0071e3; --blue-hover: #0077ed; --link: #0066cc;
+  --tint: rgba(0,113,227,.10); --tint-strong: rgba(0,113,227,.16);
+  --good: #1d7d3f; --bad: #e30000;
+  --r-card: 18px; --r-ctl: 12px; --r-pill: 980px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000; --card: #1d1d1f; --ink: #f5f5f7; --muted: #86868b;
+    --line: #424245; --hairline: #333336;
+    --blue: #0071e3; --blue-hover: #0077ed; --link: #2997ff;
+    --tint: rgba(41,151,255,.16); --tint-strong: rgba(41,151,255,.24);
+    --good: #30d158; --bad: #ff453a;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--ink);
+  font-size: 17px; line-height: 1.47; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: 17px;
+  color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r-ctl); padding: 11px 14px; width: 100%; }
+input:focus, select:focus, textarea:focus { outline: none;
+  border-color: var(--blue); box-shadow: 0 0 0 3px var(--tint-strong); }
+input[type=radio], input[type=checkbox] { width: auto; padding: 0;
+  margin: 3px 0 0; }
+input[type=radio]:focus, input[type=checkbox]:focus { box-shadow: none; }
+textarea { min-height: 92px; resize: vertical; }
+label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 6px; }
+.field { margin: 0 0 18px; }
+.pill { display: inline-block; background: var(--blue); color: #fff;
+  border: 0; border-radius: var(--r-pill); padding: 12px 24px; font-size: 17px;
+  font-weight: 500; cursor: pointer;
+  transition: background .2s ease, transform .15s ease, opacity .2s ease; }
+.pill:hover { background: var(--blue-hover); }
+.pill:active { transform: scale(.97); }
+.pill:disabled { opacity: .45; cursor: default; }
+.pill.ghost { background: transparent; color: var(--blue);
+  border: 1px solid var(--blue); }
+.pill.ghost:hover { background: var(--tint); }
+.banner { border-radius: var(--r-ctl); padding: 12px 16px; font-size: 15px;
+  margin: 0 0 18px; background: rgba(227,0,0,.08); color: var(--bad);
+  border: 1px solid rgba(227,0,0,.25); }
+.banner.ok { background: rgba(29,125,63,.08); color: var(--good);
+  border-color: rgba(29,125,63,.25); }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 40px 16px 64px;
+  min-height: 100vh; min-height: 100dvh; display: flex;
+  flex-direction: column; justify-content: center; }
+
+/* The card opens at the width of its content -- profile plus calendar --
+   and eases wider only when a chosen day slides the time list in, the way
+   Calendly's does. Collapsing back (details, done) narrows it again. */
+.card { background: var(--card); border-radius: var(--r-card);
+  box-shadow: 0 4px 24px rgba(0,0,0,.06); display: flex; overflow: hidden;
+  min-height: 560px; max-width: 780px; margin: 0 auto;
+  transition: max-width .5s cubic-bezier(.3,.8,.3,1);
+  animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+.card.wide { max-width: 1060px; }
+@media (prefers-color-scheme: dark) { .card { box-shadow: none;
+  border: 1px solid var(--hairline); } }
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.pane-left { flex: 0 0 300px; padding: 32px 28px; border-right: 1px solid
+  var(--hairline); display: flex; flex-direction: column; }
+.pane-right { flex: 1 1 auto; padding: 32px 32px 40px; position: relative; }
+
+/* z-index matters: the step sections are later siblings and their
+   (transparent) boxes would otherwise sit on top and eat every click. */
+.back { position: absolute; top: 24px; left: 26px; width: 44px; height: 44px;
+  z-index: 10; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--card); color: var(--blue); cursor: pointer;
+  font-size: 20px; line-height: 1; display: none; align-items: center;
+  justify-content: center;
+  transition: background .2s ease, transform .15s ease; }
+.back:hover { background: var(--tint); transform: scale(1.06); }
+.back:active { transform: scale(.96); }
+
+.avatar { width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, #0071e3, #5ac8fa); color: #fff;
+  font-size: 24px; font-weight: 600; display: flex; align-items: center;
+  justify-content: center; margin: 0 0 14px; }
+.owner { margin: 0 0 2px; color: var(--muted); font-size: 15px;
+  font-weight: 600; }
+h1 { font-size: 28px; letter-spacing: -0.02em; margin: 0 0 16px; }
+.meta { list-style: none; margin: 0 0 16px; padding: 0; color: var(--muted);
+  font-size: 15px; }
+.meta li { display: flex; align-items: flex-start; gap: 9px; margin: 0 0 10px; }
+.meta svg { flex: 0 0 18px; margin-top: 2px; }
+.meta .strong { color: var(--ink); font-weight: 600; }
+.desc { margin: 0; color: var(--muted); font-size: 15px; }
+.tip { margin-top: auto; padding-top: 22px; color: var(--muted);
+  font-size: 12.5px; }
+
+.pane-right h2 { font-size: 21px; margin: 0 0 20px; }
+/* Steps re-run their fade every time they toggle from display:none. */
+#step-pick, #step-form, #step-done { animation: fade .4s ease both; }
+#m-when, #m-tz { animation: fade .45s ease both; }
+.pick { display: flex; }
+.cal { flex: 0 1 380px; }
+.cal-head { display: flex; align-items: center; justify-content: center;
+  gap: 4px; margin: 0 0 14px; }
+.cal-head b { font-size: 16px; font-weight: 600; min-width: 150px;
+  text-align: center; }
+.nav { width: 36px; height: 36px; border-radius: 50%; border: 0;
+  background: transparent; color: var(--blue); cursor: pointer;
+  font-size: 17px; transition: background .2s ease, color .2s ease; }
+.nav:hover:not(:disabled) { background: var(--tint); }
+.nav:disabled { color: var(--line); cursor: default; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  justify-items: center; }
+.dow { font-size: 12px; color: var(--muted); font-weight: 600;
+  padding: 6px 0; text-transform: uppercase; letter-spacing: .04em; }
+.day { width: 42px; height: 42px; border-radius: 50%; border: 0;
+  background: transparent; color: var(--line); font-size: 15px;
+  transition: background .2s ease, color .2s ease, transform .16s ease; }
+.day.open { background: var(--tint); color: var(--blue); font-weight: 600;
+  cursor: pointer; }
+.day.open:hover { background: var(--tint-strong); transform: scale(1.1); }
+.day.sel { background: var(--blue); color: #fff; }
+.tzrow { display: flex; align-items: center; gap: 2px; margin-top: 20px;
+  flex-wrap: wrap; }
+.tzrow label { margin: 0; flex: 0 0 auto; display: flex; align-items: center;
+  gap: 8px; font-size: 14px; color: var(--ink); font-weight: 600; }
+/* The trigger sits in the text line at the label's own size; the picking
+   happens in the modal below. Chevron drawn with borders -- CSP forbids
+   background-image URLs. */
+.tzbtn { border: 0; background: transparent; color: var(--ink);
+  font-size: 14px; font-weight: 400; display: inline-flex;
+  align-items: center; gap: 7px; padding: 6px 10px; border-radius: 8px;
+  cursor: pointer; max-width: 100%;
+  transition: background .2s ease, color .2s ease; }
+.tzbtn:hover { background: rgba(0,0,0,.06); }
+.tzbtn:focus-visible { outline: none;
+  box-shadow: 0 0 0 3px var(--tint-strong); }
+.tzbtn i { flex: 0 0 auto; width: 7px; height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg) translate(-1px,-1px); }
+@media (prefers-color-scheme: dark) {
+  .tzbtn:hover { background: rgba(255,255,255,.1); }
+}
+
+/* --- time zone modal --- */
+.modal { position: fixed; inset: 0; z-index: 100; display: flex;
+  align-items: center; justify-content: center; padding: 24px; }
+.modal[hidden] { display: none; }
+.modal-back { position: absolute; inset: 0; background: rgba(0,0,0,.35);
+  animation: fade .25s ease both; }
+.modal-card { position: relative; width: min(430px, 100%);
+  max-height: min(560px, 80vh); background: var(--card);
+  border-radius: 16px; box-shadow: 0 24px 70px rgba(0,0,0,.3);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: pop .3s cubic-bezier(.2,.8,.3,1.05) both; }
+@keyframes pop { from { opacity: 0; transform: scale(.95) translateY(10px); }
+  to { opacity: 1; transform: none; } }
+.modal-card .search { padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--hairline); }
+.modal-card .search input { border: 0; border-radius: 10px;
+  background: rgba(0,0,0,.05); font-size: 15px; padding: 10px 13px; }
+.modal-card .search input:focus { box-shadow: none;
+  background: rgba(0,0,0,.08); }
+@media (prefers-color-scheme: dark) {
+  .modal-card .search input { background: rgba(255,255,255,.09); }
+  .modal-card .search input:focus { background: rgba(255,255,255,.13); }
+}
+.tzlist { overflow-y: auto; padding: 6px; flex: 1 1 auto; }
+.tzitem { display: flex; justify-content: space-between; gap: 12px;
+  align-items: baseline; padding: 9px 12px; border-radius: 9px;
+  font-size: 14.5px; color: var(--ink); cursor: pointer; }
+.tzitem small { color: var(--muted); font-size: 12.5px; flex: 0 0 auto; }
+.tzitem:hover { background: rgba(0,0,0,.05); }
+.tzitem.active { background: var(--tint-strong); color: var(--blue); }
+.tzitem.active small { color: var(--blue); }
+.tzitem.current { font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .tzitem:hover { background: rgba(255,255,255,.08); }
+}
+.tzempty { padding: 22px 14px; color: var(--muted); font-size: 14px;
+  text-align: center; }
+
+/* Collapsed to nothing until a day is picked; .on eases the column open in
+   step with the card widening. */
+.times { flex: 0 0 auto; width: 0; margin-left: 0; opacity: 0;
+  overflow: hidden; max-height: 430px;
+  transition: width .5s cubic-bezier(.3,.8,.3,1),
+    margin .5s cubic-bezier(.3,.8,.3,1), opacity .3s ease .12s; }
+.times.on { width: 232px; margin-left: 32px; opacity: 1; overflow-y: auto;
+  padding-right: 4px; }
+.times h3 { font-size: 15px; font-weight: 600; margin: 0 0 14px;
+  white-space: nowrap; }
+.slotrow { display: flex; gap: 8px; margin: 0 0 10px;
+  animation: rise .35s ease both; }
+.slot { flex: 1 1 auto; padding: 12px 8px; font-size: 15px; font-weight: 600;
+  color: var(--blue); background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r-ctl); cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, color .2s ease; }
+.slot:hover { border-color: var(--blue); }
+.slot.picked { background: var(--muted); border-color: var(--muted);
+  color: #fff; cursor: default; }
+.next { flex: 1 1 auto; padding: 12px 8px; font-size: 15px; font-weight: 600;
+  color: #fff; background: var(--blue); border: 0;
+  border-radius: var(--r-ctl); cursor: pointer;
+  animation: fade .25s ease both;
+  transition: background .2s ease, transform .15s ease; }
+.next:hover { background: var(--blue-hover); }
+.next:active { transform: scale(.97); }
+
+.details { max-width: 480px; }
+.details h2 { margin-left: 54px; line-height: 40px; }
+.fine { font-size: 12.5px; color: var(--muted); margin: 0 0 20px; }
+.guests { margin: -6px 0 18px; }
+
+.done { max-width: 460px; text-align: left; padding-top: 12px; }
+.done .mark { width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(29,125,63,.1); color: var(--good); display: flex;
+  align-items: center; justify-content: center; margin: 0 0 18px; }
+.done h2 { margin: 0 0 10px; }
+.done p { color: var(--muted); font-size: 15px; margin: 0 0 10px; }
+.empty { color: var(--muted); font-size: 15px; padding: 40px 0;
+  text-align: center; }
+
+@media (max-width: 880px) {
+  .wrap { padding: 16px 10px 40px; }
+  .card, .card.wide { flex-direction: column; max-width: 560px;
+    min-height: 0; }
+  .pane-left { flex: none; border-right: 0; padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--hairline); }
+  .pane-right { padding: 24px 20px 32px; }
+  .back { top: 18px; left: 16px; }
+  .pick { flex-direction: column; }
+  .cal { flex: none; }
+  /* On a phone the time list unfolds downward instead of sideways. */
+  .times { width: auto; margin: 0; max-height: 0;
+    transition: max-height .5s cubic-bezier(.3,.8,.3,1), opacity .3s ease .1s,
+      margin .5s ease; }
+  .times.on { width: auto; margin: 18px 0 0; max-height: 480px;
+    padding-right: 0; }
+  .tip { padding-top: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important; transition: none !important; }
+}
+/* --- local addition (www.heyuehuan.com) ---------------------------------
+   Applied by tools/sync-appointment-card.js; see the note at the top of this
+   file. ?theme=dark|light becomes <html data-theme>, which has to beat
+   prefers-color-scheme in both directions — hence both palettes, plus the
+   four rules above that are not token-only. */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f5f7; --card: #ffffff; --ink: #1d1d1f; --muted: #6e6e73;
+  --line: #d2d2d7; --hairline: #e8e8ed;
+  --blue: #0071e3; --blue-hover: #0077ed; --link: #0066cc;
+  --tint: rgba(0,113,227,.10); --tint-strong: rgba(0,113,227,.16);
+  --good: #1d7d3f; --bad: #e30000;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000; --card: #1d1d1f; --ink: #f5f5f7; --muted: #86868b;
+  --line: #424245; --hairline: #333336;
+  --blue: #0071e3; --blue-hover: #0077ed; --link: #2997ff;
+  --tint: rgba(41,151,255,.16); --tint-strong: rgba(41,151,255,.24);
+  --good: #30d158; --bad: #ff453a;
+}
+html[data-theme="light"] .card { box-shadow: 0 4px 24px rgba(0,0,0,.06);
+  border: 0; }
+html[data-theme="dark"] .card { box-shadow: none;
+  border: 1px solid var(--hairline); }
+html[data-theme="light"] .tzbtn:hover { background: rgba(0,0,0,.06); }
+html[data-theme="dark"] .tzbtn:hover { background: rgba(255,255,255,.1); }
+html[data-theme="light"] .modal-card .search input { background: rgba(0,0,0,.05); }
+html[data-theme="light"] .modal-card .search input:focus { background: rgba(0,0,0,.08); }
+html[data-theme="dark"] .modal-card .search input { background: rgba(255,255,255,.09); }
+html[data-theme="dark"] .modal-card .search input:focus { background: rgba(255,255,255,.13); }
+html[data-theme="light"] .tzitem:hover { background: rgba(0,0,0,.05); }
+html[data-theme="dark"] .tzitem:hover { background: rgba(255,255,255,.08); }
+</style>
+<link rel="icon" type="image/png" href="/media/icon-32.png">
+<link rel="apple-touch-icon" type="image/png" href="/media/icon-180.png">
+<script>
+// local addition — see tools/sync-appointment-card.js
+(function () {
+  var m = /[?&]theme=(dark|light)/.exec(window.location.search);
+  if (m) document.documentElement.setAttribute("data-theme", m[1]);
+})();
+</script>
+</head><body>
+
+<div class="wrap"><div class="card" id="card">
+<aside class="pane-left">
+  <div class="avatar">Y</div>
+  <p class="owner">Yuehuan</p>
+  <h1>Meeting</h1>
+  <ul class="meta">
+    <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>15 min</span></li>
+    <li id="m-when" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span></span></li>
+    <li id="m-tz" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg><span></span></li>
+  </ul>
+  <p class="desc">Request a 15 minute appointment with Yuehuan He.</p>
+  <p class="tip">© 2026 Yuehuan</p>
+</aside>
+<main class="pane-right">
+  <button type="button" class="back" id="back" aria-label="Back">&#8592;</button>
+  <div class="banner" id="banner" style="display:none"></div>
+
+  <section id="step-pick">
+    <h2>Select a Date &amp; Time</h2>
+    <div class="pick">
+      <div class="cal">
+        <div class="cal-head">
+          <button type="button" class="nav" id="prev" aria-label="Previous month">&#8249;</button>
+          <b id="cal-title"></b>
+          <button type="button" class="nav" id="next-month" aria-label="Next month">&#8250;</button>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="tzrow">
+          <label for="tz"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg> Time zone</label>
+          <button type="button" id="tz" class="tzbtn" aria-haspopup="dialog">
+            <span></span><i aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="times" id="times">
+        <h3 id="times-head"></h3>
+        <div id="slotlist"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="step-form" style="display:none">
+    <div class="details">
+      <h2>Enter Details</h2>
+      <form id="form">
+        <div class="field"><label for="f-name">Name *</label>
+          <input id="f-name" required maxlength="120" autocomplete="name"></div>
+        <div class="field"><label for="f-email">Email *</label>
+          <input id="f-email" type="email" required maxlength="254"
+                 autocomplete="email"></div>
+        <div class="guests">
+          <button type="button" class="pill ghost" id="f-addguests"
+                  style="padding:7px 16px;font-size:14px">Add guests</button>
+          <div class="field" id="guest-field" style="display:none;margin-top:10px">
+            <label for="f-guests">Guest emails (comma separated)</label>
+            <input id="f-guests" maxlength="500"
+                   placeholder="ada@example.com, alan@example.com"></div>
+        </div>
+        <div class="field"><label for="f-topic">Topic of Meeting *</label>
+          <input id="f-topic" required maxlength="2000"></div>
+        <div class="field">
+          <label for="f-share">Please share anything that will help prepare
+          for our meeting.</label>
+          <textarea id="f-share" maxlength="1000"></textarea></div>
+        <input id="f-website" name="website" tabindex="-1" autocomplete="off"
+               style="position:absolute;left:-9999px;width:1px;height:1px"
+               aria-hidden="true">
+        <p class="fine">You'll receive a confirmation email if your request
+        is accepted.</p>
+        <button type="submit" class="pill" id="f-submit">Request Meeting</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="step-done" style="display:none">
+    <div class="done">
+      <div class="mark"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <h2>Thank you for reaching out!</h2>
+      <p>Your request for <b id="done-when"></b> has been sent.</p>
+      <p>You'll receive a confirmation email if the request is accepted.</p>
+    </div>
+  </section>
+</main>
+</div></div>
+
+<div class="modal" id="tzmodal" hidden role="dialog" aria-modal="true"
+     aria-label="Choose a time zone">
+  <div class="modal-back"></div>
+  <div class="modal-card">
+    <div class="search">
+      <input id="tzsearch" placeholder="Search time zones…"
+             autocomplete="off" spellcheck="false">
+    </div>
+    <div class="tzlist" id="tzlist"></div>
+  </div>
+</div>
+<script>window.BOOT = {"base": "https://api.heyuehuan.com/appointment", "timezone": "America/New_York", "duration": 15};</script>
+<script>
+'use strict';
+var S = {
+  month: null,          // first-of-month Date for the visible grid
+  cache: {},            // "YYYY-M" -> {days: {isoDate: [slotIso...]}}
+  loading: false,
+  hops: 2,              // auto-advance allowance while the grid opens empty
+  tz: Intl.DateTimeFormat().resolvedOptions().timeZone || BOOT.timezone,
+  selDate: null, selSlot: null, picked: null
+};
+var $ = function (id) { return document.getElementById(id); };
+
+function fmtDate(d, tz) {   // "2026-08-06" in tz
+  return new Intl.DateTimeFormat('en-CA',
+    {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'})
+    .format(d);
+}
+function fmtTime(d, tz) {   // "7:00pm"
+  return new Intl.DateTimeFormat('en-US',
+    {timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true})
+    .format(d).toLowerCase().replace(' ', '');
+}
+function fmtLong(d, tz) {   // "Thursday, August 13"
+  return new Intl.DateTimeFormat('en-US',
+    {timeZone: tz, weekday: 'long', month: 'long', day: 'numeric'}).format(d);
+}
+function fmtFull(d, tz) {   // "7:00pm, Thursday, August 13, 2026"
+  return fmtTime(d, tz) + ', ' + new Intl.DateTimeFormat('en-US',
+    {timeZone: tz, weekday: 'long', month: 'long', day: 'numeric',
+     year: 'numeric'}).format(d);
+}
+function tzLabel(tz) {
+  var now = new Date();
+  return tz.replace(/_/g, ' ') + ' (' + fmtTime(now, tz) + ')';
+}
+
+function monthKey(m) { return m.getFullYear() + '-' + m.getMonth(); }
+
+function loadMonth(m) {
+  var key = monthKey(m);
+  if (S.cache[key]) { renderAll(); return; }
+  S.loading = true; renderCal();
+  // Pad a day each side: bucketing happens in the display timezone, and its
+  // month edges do not line up with the availability timezone's.
+  var from = new Date(m.getFullYear(), m.getMonth(), 1);
+  from.setDate(from.getDate() - 1);
+  var to = new Date(m.getFullYear(), m.getMonth() + 1, 0);
+  to.setDate(to.getDate() + 1);
+  var pad = function (d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  fetch(BOOT.base + '/slots?from=' + pad(from) + '&to=' + pad(to))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      S.cache[key] = {slots: data.slots || []};
+      S.loading = false;
+      // On first load, hop forward to the first month that has anything --
+      // opening on a bare grid because the current month is spent helps
+      // nobody. Only days inside the DISPLAYED month count: the padded
+      // fetch drags the neighbours' edge days into the cache. Two hops
+      // covers any horizon this service allows.
+      var prefix = m.getFullYear() + '-'
+        + String(m.getMonth() + 1).padStart(2, '0') + '-';
+      var open = Object.keys(daysFor(m)).some(function (k) {
+        return k.indexOf(prefix) === 0;
+      });
+      if (S.hops > 0 && !open) {
+        S.hops -= 1;
+        S.month = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+        loadMonth(S.month);
+        return;
+      }
+      S.hops = 0;
+      renderAll();
+    })
+    .catch(function () {
+      S.loading = false;
+      showBanner('Could not load availability. Please try again.');
+      renderAll();
+    });
+}
+
+function daysFor(m) {       // {isoDate: [Date...]} bucketed in display tz
+  var entry = S.cache[monthKey(m)];
+  var out = {};
+  if (!entry) return out;
+  entry.slots.forEach(function (iso) {
+    var d = new Date(iso);
+    var key = fmtDate(d, S.tz);
+    (out[key] = out[key] || []).push(d);
+  });
+  Object.keys(out).forEach(function (k) {
+    out[k].sort(function (a, b) { return a - b; });
+  });
+  return out;
+}
+
+function renderCal() {
+  var m = S.month, grid = $('grid');
+  $('cal-title').textContent = new Intl.DateTimeFormat('en-US',
+    {month: 'long', year: 'numeric'}).format(m);
+  var today = new Date();
+  $('prev').disabled =
+    m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth();
+
+  var days = daysFor(m);
+  var html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    .map(function (d) { return '<span class="dow">' + d + '</span>'; });
+  var first = new Date(m.getFullYear(), m.getMonth(), 1);
+  for (var i = 0; i < first.getDay(); i++) html.push('<span></span>');
+  var last = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+  for (var day = 1; day <= last; day++) {
+    var key = m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0')
+      + '-' + String(day).padStart(2, '0');
+    var cls = 'day' + (days[key] ? ' open' : '')
+      + (key === S.selDate ? ' sel' : '');
+    html.push('<button type="button" class="' + cls + '" data-d="' + key + '"'
+      + (days[key] ? '' : ' disabled') + '>' + day + '</button>');
+  }
+  grid.innerHTML = html.join('');
+  grid.querySelectorAll('.day.open').forEach(function (b) {
+    b.addEventListener('click', function () { pickDate(b.dataset.d); });
+  });
+}
+
+function pickDate(key) {
+  S.selDate = key; S.picked = null;
+  renderCal(); renderTimes();
+}
+
+function renderTimes() {
+  var box = $('times'), open = !!S.selDate;
+  // Class-driven so CSS can ease the column (and the card) open and shut.
+  box.classList.toggle('on', open);
+  $('card').classList.toggle('wide', open);
+  if (!open) return;
+  var days = daysFor(S.month), slots = days[S.selDate] || [];
+  // The staggered fade plays once, when a day's list first appears. Picking
+  // a time re-renders the same list, and replaying the cascade on every tap
+  // reads as flicker -- so those re-renders draw instantly.
+  var animate = S.shownDate !== S.selDate + '|' + S.tz;
+  S.shownDate = S.selDate + '|' + S.tz;
+  $('times-head').textContent = slots.length
+    ? fmtLong(slots[0], S.tz) : '';
+  var list = $('slotlist');
+  list.innerHTML = '';
+  if (!slots.length) {
+    list.innerHTML = '<p class="empty">No times left on this day.</p>';
+    return;
+  }
+  slots.forEach(function (d, i) {
+    var row = document.createElement('div');
+    row.className = 'slotrow';
+    if (animate) row.style.animationDelay = Math.min(i * 35, 350) + 'ms';
+    else row.style.animation = 'none';
+    if (S.picked && S.picked.getTime() === d.getTime()) {
+      row.innerHTML = '<button type="button" class="slot picked">'
+        + fmtTime(d, S.tz) + '</button>'
+        + '<button type="button" class="next">Next</button>';
+      row.querySelector('.next').addEventListener('click', function () {
+        toForm(d);
+      });
+    } else {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'slot';
+      b.textContent = fmtTime(d, S.tz);
+      b.addEventListener('click', function () {
+        S.picked = d; renderTimes();
+      });
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  });
+}
+
+function renderSide() {
+  var when = $('m-when'), tz = $('m-tz');
+  if (S.selSlot) {
+    var end = new Date(S.selSlot.getTime() + BOOT.duration * 60000);
+    when.style.display = 'flex';
+    when.querySelector('span').innerHTML = '<span class="strong">'
+      + fmtTime(S.selSlot, S.tz) + ' – ' + fmtTime(end, S.tz) + ', '
+      + fmtLong(S.selSlot, S.tz) + ', '
+      + S.selSlot.toLocaleDateString('en-US',
+          {timeZone: S.tz, year: 'numeric'}) + '</span>';
+    tz.style.display = 'flex';
+    tz.querySelector('span').textContent = S.tz.replace(/_/g, ' ');
+  } else {
+    when.style.display = 'none';
+    tz.style.display = 'none';
+  }
+}
+
+function show(step) {   // 'pick' | 'form' | 'done'
+  ['pick', 'form', 'done'].forEach(function (s) {
+    $('step-' + s).style.display = s === step ? 'block' : 'none';
+  });
+  // Only the picker with a chosen day earns the wide card; the details and
+  // done views ease back to the narrow one.
+  $('card').classList.toggle('wide', step === 'pick' && !!S.selDate);
+  $('back').style.display = step === 'form' ? 'flex' : 'none';
+  hideBanner();
+}
+
+function toForm(d) {
+  S.selSlot = d;
+  renderSide(); show('form');
+  $('f-name').focus();
+}
+
+function backToPick() {
+  S.selSlot = null;
+  renderSide(); show('pick');
+  renderCal(); renderTimes();
+}
+
+function showBanner(text, ok) {
+  var b = $('banner');
+  b.textContent = text;
+  b.className = 'banner' + (ok ? ' ok' : '');
+  b.style.display = 'block';
+}
+function hideBanner() { $('banner').style.display = 'none'; }
+
+function submit(ev) {
+  ev.preventDefault();
+  if (!S.selSlot) return;
+  var notes = $('f-share').value.trim();
+  var guests = $('f-guests').value.trim();
+  if (guests) notes = (notes ? notes + '\n\n' : '') + 'Guests: ' + guests;
+  var body = {
+    name: $('f-name').value.trim(),
+    email: $('f-email').value.trim(),
+    reason: $('f-topic').value.trim(),
+    notes: notes || null,
+    timezone: S.tz,
+    duration_minutes: BOOT.duration,
+    proposed_slots: [S.selSlot.toISOString()],
+    require_available: true,
+    website: $('f-website').value   // honeypot; humans never see it
+  };
+  var btn = $('f-submit');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  fetch(BOOT.base + '/request', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  }).then(function (r) {
+    return r.json().then(function (data) { return {status: r.status, data: data}; });
+  }).then(function (r) {
+    btn.disabled = false; btn.textContent = 'Request Meeting';
+    if (r.status === 202) {
+      $('done-when').textContent = fmtFull(S.selSlot, S.tz)
+        + ' (' + S.tz.replace(/_/g, ' ') + ')';
+      show('done');
+    } else if (r.status === 409) {
+      S.cache = {}; S.picked = null; S.selSlot = null;
+      backToPick(); loadMonth(S.month);
+      showBanner('That time was just taken. Please pick another.');
+    } else if (r.status === 429) {
+      showBanner(r.data.detail || 'Too many requests today. Please try again tomorrow.');
+    } else {
+      showBanner(r.data.detail || 'Something went wrong. Please try again.');
+    }
+  }).catch(function () {
+    btn.disabled = false; btn.textContent = 'Request Meeting';
+    showBanner('Network problem. Please try again.');
+  });
+}
+
+// --- time zone modal ---
+// The trigger is a text-sized button; picking happens in an overlay with a
+// search box that owns the keyboard: type to filter, arrows to move, Enter
+// to choose, Escape to leave.
+var TZ = {zones: [], shown: [], active: 0, times: {}};
+
+function allZones() {
+  var zones;
+  try { zones = Intl.supportedValuesOf('timeZone'); }
+  catch (e) {
+    zones = [BOOT.timezone, 'America/New_York', 'America/Toronto',
+      'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+      'America/Vancouver', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+      'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Kolkata',
+      'Australia/Sydney', 'UTC'];
+  }
+  if (zones.indexOf(S.tz) < 0) zones = [S.tz].concat(zones);
+  return zones;
+}
+
+function tzButtonLabel() {
+  $('tz').querySelector('span').textContent = tzLabel(S.tz);
+}
+
+function tzFilter(query) {
+  var q = query.toLowerCase().replace(/[_\/]/g, ' ').trim();
+  TZ.shown = TZ.zones.filter(function (z) {
+    return z.toLowerCase().replace(/[_\/]/g, ' ').indexOf(q) >= 0;
+  });
+  TZ.active = Math.max(0, TZ.shown.indexOf(S.tz));
+  renderTzList();
+}
+
+function renderTzList() {
+  var list = $('tzlist');
+  if (!TZ.shown.length) {
+    list.innerHTML = '<p class="tzempty">No matching time zones.</p>';
+    return;
+  }
+  list.innerHTML = TZ.shown.map(function (z, i) {
+    var cls = 'tzitem' + (i === TZ.active ? ' active' : '')
+      + (z === S.tz ? ' current' : '');
+    return '<div class="' + cls + '" data-i="' + i + '">'
+      + '<span>' + z.replace(/_/g, ' ') + '</span>'
+      + '<small>' + (TZ.times[z] || '') + '</small></div>';
+  }).join('');
+  var row = list.children[TZ.active];
+  if (row && row.scrollIntoView) row.scrollIntoView({block: 'nearest'});
+}
+
+function tzSetActive(index) {
+  if (!TZ.shown.length) return;
+  TZ.active = Math.min(Math.max(index, 0), TZ.shown.length - 1);
+  renderTzList();
+}
+
+function openTz() {
+  TZ.zones = TZ.zones.length ? TZ.zones : allZones();
+  TZ.times = {};
+  var now = new Date();
+  TZ.zones.forEach(function (z) {
+    try { TZ.times[z] = fmtTime(now, z); } catch (e) { TZ.times[z] = ''; }
+  });
+  $('tzmodal').hidden = false;
+  $('tzsearch').value = '';
+  tzFilter('');
+  $('tzsearch').focus();
+}
+
+function closeTz() {
+  $('tzmodal').hidden = true;
+  $('tz').focus();
+}
+
+function chooseTz(zone) {
+  if (!zone) return;
+  closeTz();
+  if (zone === S.tz) return;
+  S.tz = zone; S.selDate = null; S.picked = null;
+  tzButtonLabel();
+  renderAll();
+}
+
+function initTz() {
+  tzButtonLabel();
+  $('tz').addEventListener('click', openTz);
+  $('tzmodal').querySelector('.modal-back')
+    .addEventListener('click', closeTz);
+  $('tzsearch').addEventListener('input', function () {
+    tzFilter(this.value);
+  });
+  $('tzsearch').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); tzSetActive(TZ.active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); tzSetActive(TZ.active - 1); }
+    else if (e.key === 'PageDown') { e.preventDefault(); tzSetActive(TZ.active + 10); }
+    else if (e.key === 'PageUp') { e.preventDefault(); tzSetActive(TZ.active - 10); }
+    else if (e.key === 'Enter') { e.preventDefault(); chooseTz(TZ.shown[TZ.active]); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeTz(); }
+  });
+  $('tzlist').addEventListener('click', function (e) {
+    var row = e.target.closest('.tzitem');
+    if (row) chooseTz(TZ.shown[parseInt(row.dataset.i, 10)]);
+  });
+  $('tzlist').addEventListener('mousemove', function (e) {
+    var row = e.target.closest('.tzitem');
+    if (row) {
+      var i = parseInt(row.dataset.i, 10);
+      if (i !== TZ.active) {
+        TZ.active = i;
+        var prev = $('tzlist').querySelector('.tzitem.active');
+        if (prev) prev.classList.remove('active');
+        row.classList.add('active');
+      }
+    }
+  });
+}
+
+function renderAll() { renderCal(); renderTimes(); renderSide(); }
+
+document.addEventListener('DOMContentLoaded', function () {
+  var now = new Date();
+  S.month = new Date(now.getFullYear(), now.getMonth(), 1);
+  initTz();
+  $('prev').addEventListener('click', function () {
+    S.month = new Date(S.month.getFullYear(), S.month.getMonth() - 1, 1);
+    S.selDate = null; S.picked = null; loadMonth(S.month);
+  });
+  $('next-month').addEventListener('click', function () {
+    S.month = new Date(S.month.getFullYear(), S.month.getMonth() + 1, 1);
+    S.selDate = null; S.picked = null; loadMonth(S.month);
+  });
+  $('back').addEventListener('click', backToPick);
+  $('form').addEventListener('submit', submit);
+  $('f-addguests').addEventListener('click', function () {
+    $('guest-field').style.display = 'block';
+    this.style.display = 'none';
+    $('f-guests').focus();
+  });
+  loadMonth(S.month);
+  show('pick');
+});
+</script>
+</body></html>
