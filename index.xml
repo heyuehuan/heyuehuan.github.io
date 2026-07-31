@@ -5,7 +5,7 @@
     <link>https://www.heyuehuan.com/</link>
       <atom:link href="https://www.heyuehuan.com/index.xml" rel="self" type="application/rss+xml" />
     <description>Yuehuan He</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 23 May 2023 00:00:00 +0000</lastBuildDate>
+    <generator>Eleventy</generator><language>en-us</language><lastBuildDate>Tue, 23 May 2023 00:00:00 +0000</lastBuildDate>
     <image>
       <url>https://www.heyuehuan.com/media/icon_hud37bb86038149fec507f43a2191faf18_50875_512x512_fill_lanczos_center_3.png</url>
       <title>Yuehuan He</title>
@@ -59,6 +59,14 @@
     </item>
     
     <item>
+      <title>Decision support system for the irregular flight recovery problem</title>
+      <link>https://www.heyuehuan.com/publication/irregular-flight-recovery/</link>
+      <pubDate>Mon, 01 Mar 2021 00:00:00 +0000</pubDate>
+      <guid>https://www.heyuehuan.com/publication/irregular-flight-recovery/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Cognitive User Interface for Portfolio Optimization</title>
       <link>https://www.heyuehuan.com/publication/cognitive-fin-port-opt/</link>
       <pubDate>Mon, 15 Feb 2021 00:00:00 +0000</pubDate>
@@ -66,13 +74,5 @@
       <description></description>
     </item>
     
-    <item>
-      <title>Decision support system for the irregular flight recovery problem</title>
-      <link>https://www.heyuehuan.com/publication/irregular-flight-recovery/</link>
-      <pubDate>Mon, 01 Jun 2020 00:00:00 +0000</pubDate>
-      <guid>https://www.heyuehuan.com/publication/irregular-flight-recovery/</guid>
-      <description></description>
-    </item>
-
   </channel>
 </rss>
