@@ -5,12 +5,496 @@
     <link>https://www.heyuehuan.com/</link>
       <atom:link href="https://www.heyuehuan.com/index.xml" rel="self" type="application/rss+xml" />
     <description>Yuehuan He</description>
-    <generator>Eleventy</generator><language>en-us</language><lastBuildDate>Tue, 23 May 2023 00:00:00 +0000</lastBuildDate>
+    <generator>Eleventy</generator><language>en-us</language><lastBuildDate>Sat, 15 Aug 2026 00:00:00 +0000</lastBuildDate>
     <image>
       <url>https://www.heyuehuan.com/media/icon-512.png</url>
       <title>Yuehuan He</title>
       <link>https://www.heyuehuan.com/</link>
     </image>
+    
+    <item>
+      <title>Revisit SIAST: a 2023 class-imbalance problem in slot filling under 2026 large language models</title>
+      <link>https://www.heyuehuan.com/post/slot-filling-llm-revisit/</link>
+      <pubDate>Sat, 15 Aug 2026 00:00:00 +0000</pubDate>
+      <guid>https://www.heyuehuan.com/post/slot-filling-llm-revisit/</guid>
+      <description>&lt;p&gt;&lt;em&gt;In 2023 we published a semi-supervised method for slot filling that corrected a
+label-imbalance failure common in real data: when a model is trained on a small
+labelled set and then retrained on its own predictions, the rare categories are
+progressively absorbed by the frequent ones, and the resulting model performs
+poorly on those rare categories. In this article we return to that task with
+current language models, keeping the dataset, the test set, the scoring, and the
+label imbalance unchanged, and moving the supervision from gradient updates into
+the prompt. Gemini 3.5 Flash, given the original ten labelled examples per category and no
+fine-tuning, reaches an overall macro-F1 of 90.6 against the published 89.7. Classifying every predicted and every annotated span
+individually shows that the rare-to-frequent relabelling the 2023 method was
+built to remove is largely absent from the models we tested. What remains on rare
+categories is a milder kind of error: mostly reasonable alternative predictions,
+in which the label the model assigns also fits the span but the corpus records a
+different one, together with minor differences in span boundaries.&lt;/em&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;The task and how it is scored&lt;/h2&gt;
+&lt;p&gt;Slot filling is the extraction of typed spans from a short user utterance. It is
+named entity recognition against a domain-specific schema rather than a generic
+one. In the utterance &lt;em&gt;&amp;quot;play how does it work by helen carter&amp;quot;&lt;/em&gt;, the span &amp;quot;how
+does it work&amp;quot; is annotated as &lt;code&gt;album&lt;/code&gt; and &amp;quot;helen carter&amp;quot; as &lt;code&gt;artist&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The benchmark is SNIPS (Coucke et al., 2018), a voice-assistant corpus covering
+seven intents such as playing music, booking a restaurant, and checking weather,
+with 39 slot types.
+The test split we evaluate on contains 700 utterances, in which we count 1,790
+annotated spans. A prediction is
+counted correct only when both its type and its exact token boundaries match the
+annotation, so &amp;quot;the berghoff&amp;quot; and &amp;quot;berghoff&amp;quot; are not interchangeable answers.&lt;/p&gt;
+&lt;p&gt;Two features of the scoring matter for everything that follows. First, we rank
+the 39 slot types by their frequency in the training data and divide them into
+three groups of thirteen, which we refer to as common, mid-frequency, and rare.
+This grouping is our own analysis convention, not part of the released dataset.
+The rare group contains types such as &lt;code&gt;album&lt;/code&gt;, &lt;code&gt;track&lt;/code&gt;, and &lt;code&gt;playlist_owner&lt;/code&gt;, and
+accounts for 150 of the 1,790 test spans. Reporting per group keeps
+a collapse on infrequent categories visible instead of averaging it away.
+Second, results are reported as macro-F1, which averages the per-type F1
+scores within a group so that a type with twenty spans weighs as much as one with
+two thousand. Micro-F1, which pools all spans before scoring, is reported
+alongside it but is dominated by the frequent types.&lt;/p&gt;
+&lt;h2&gt;The failure the 2023 method addressed&lt;/h2&gt;
+&lt;p&gt;The original setting was deliberately label-poor. The model received ten labelled
+utterances per slot type, 390 in total against a training corpus of 13,084
+utterances, together with the remainder of the corpus with its labels
+removed.&lt;/p&gt;
+&lt;p&gt;The figures in this section are those reported in Liu et al. (2023). A BERT
+tagger fine-tuned on those 390 utterances reaches 82.9 macro-F1 overall
+and 76.0 on the rare group. Applying classical self-training, in which the tagger
+labels the unlabelled pool and is retrained on its own confident predictions,
+lowers the rare group to 66.4, and BOND, a confidence-thresholded self-training
+method developed for open-domain NER under distant supervision (Liang et al.,
+2020), reaches 68.5. Both are worse on rare categories than not
+self-training at all, while simultaneously improving the frequent ones: the
+pseudo-labelled stream inherits the imbalance of the labelled set and amplifies
+it with each round, and the decision boundaries drift away from the minority
+classes. MetaST (Wang et al., 2021), the strongest self-training baseline in the
+paper, avoids the collapse but reaches only 77.0 on the rare group, barely above
+the 76.0 obtained without any self-training at all.&lt;/p&gt;
+&lt;p&gt;Our method (Liu et al., 2023) combined a margin objective that separates easily
+confused rare classes during training with a resampler that rebalances the
+pseudo-labelled stream before it is fed back. It raised the rare group to 84.8
+and the overall score to 89.7. The failure it removes has a characteristic signature: rare music
+slots such as &lt;code&gt;Album&lt;/code&gt; are relabelled as frequent ones such as &lt;code&gt;Playlist&lt;/code&gt; or
+&lt;code&gt;Artist&lt;/code&gt;. The method is built to suppress that shift.&lt;/p&gt;
+&lt;h2&gt;Experimental setup&lt;/h2&gt;
+&lt;p&gt;Everything on the evaluation side is held fixed: the same 700-utterance test set,
+the same 39 types, the same exact-match scoring, and the same frequency groups.
+The single change is where the supervision enters the system.&lt;/p&gt;
+&lt;p&gt;Rather than fine-tuning on the 390 labelled utterances, we regenerated the same
+set with the same sampler and random seed, and placed it in the prompt as worked
+examples (Brown et al., 2020). Each request supplies the schema as one-line glosses per slot type,
+the 390 examples, and the test utterance, and the model returns typed spans. All
+runs decode at temperature zero. There is no fine-tuning, no self-training, and
+no access to the unlabelled pool.&lt;/p&gt;
+&lt;p&gt;We also constructed a memorisation baseline as a reference point. It is a lookup
+table that records every surface form observed with every slot in the full
+training data and tags any matching test span. Its macro-F1 is 65.6. Because the table draws on the
+full training corpus rather than on the 390-utterance labelled budget, it is a
+reference point rather than a budget-matched baseline; a result below it means
+the model does worse than a lookup over the full training data.&lt;/p&gt;
+&lt;p&gt;The models surveyed fall into two sets. The hosted ones are Gemini 3.1 Flash
+Lite, 3.5 Flash, 3.6 Flash, and 3.1 Pro, together with Kimi K2.5. The open-source ones
+are DeepSeek-R1-Distill-Qwen-7B, Qwen3-8B at full precision, and Qwen3.6-27B
+quantised to six bits, all three run end-to-end on two consumer 16 GB GPUs.&lt;/p&gt;
+&lt;p&gt;This is a follow-up run on a personal API and consumer-GPU budget rather than a controlled study.
+Every language-model figure is a single run with no repetition and no confidence
+interval, whereas the published 2023 figures are five-seed means, and the models
+were selected for availability. Small differences are likely noise.&lt;/p&gt;
+&lt;h2&gt;In-context supervision matches the published results&lt;/h2&gt;
+&lt;figure&gt;
+  &lt;img src=&#34;/media/post/slot-filling-llm-revisit/en/fig-headline.png&#34; alt=&#34;Macro-F1 by frequency group for four systems: a tagger fine-tuned on ten examples per type, the same tagger with imbalance-aware self-training, a language model given the same ten examples per type in its prompt, and a tagger fine-tuned on the full training set.&#34; loading=&#34;lazy&#34; /&gt;
+  &lt;figcaption&gt;Macro-F1 by frequency group under a common labelled budget. The prompted model (blue) matches the 2023 method (amber) in every group, including the rare one. Fully supervised fine-tuning (grey) remains ahead of both.&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;div class=&#34;table-responsive&#34;&gt;&lt;table class=&#34;table&#34;&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;System&lt;/th&gt;
+&lt;th style=&#34;text-align:right&#34;&gt;Rare group&lt;/th&gt;
+&lt;th style=&#34;text-align:right&#34;&gt;All types (macro)&lt;/th&gt;
+&lt;th style=&#34;text-align:right&#34;&gt;All types (micro)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Tagger fine-tuned on 10 examples/type (2023)&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;76.0&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;82.9&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;81.7&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;With imbalance-aware self-training (2023 method)&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;84.8&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;89.7&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;89.1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Gemini 3.5 Flash, same 10 examples/type in the prompt&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;84.2&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;90.6&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;90.9&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tagger fine-tuned on the full training set&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;91.5&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;95.0&lt;/td&gt;
+&lt;td style=&#34;text-align:right&#34;&gt;95.6&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;&lt;/div&gt;
+&lt;p&gt;Given the same 390 labels delivered as prompt text rather than as gradient
+updates, the model reaches results comparable to a method that additionally fine-tunes
+and self-trains over more than ten thousand unlabelled utterances. On the rare
+group the two are close, with macro-F1 at 84.2 against 84.8, and the
+prompted model's micro-F1 is slightly higher, 90.9 against 89.1.&lt;/p&gt;
+&lt;p&gt;Two further observations follow. First, fully supervised fine-tuning remains clearly
+stronger, with macro-F1 at 95.0 against 90.6. For a bounded extraction task of
+this kind, in which decisions seldom require world knowledge or long-range
+context, a small fine-tuned tagger is both the strongest system in this
+comparison and considerably cheaper to serve; the prompted model is the
+interesting option specifically in the label-scarce regime the original paper
+addressed. The second concerns the imbalance of the demonstrations themselves. Prior work
+reports that an imbalanced annotation pool can substantially degrade in-context
+learning across classification and generation benchmarks, and proposes
+reweighting the demonstrations to counter it (Gao et al., 2025). We had a
+specific reason to check this: our first run used a compact 236-utterance
+demonstration set built by greedy set cover, which exploits the fact that one
+utterance can carry several slot types and so flattens the very imbalance the
+2023 method studies. Its common-to-rare span ratio is 2.6, against 3.2 for the
+paper's own 390-utterance set. Rerunning Gemini 3.5 Flash on the paper's set
+moved every group by at most 0.6 macro-F1: the common group from 92.9 to 92.3,
+the mid-frequency group from 95.2 to 95.1, and the rare group from 84.6 to 84.2.
+The sampler is therefore not what produced the headline result. A contrast this
+narrow says nothing about demonstration imbalance in general, and we did not test
+the reweighting remedy.&lt;/p&gt;
+&lt;h2&gt;Model capacity and the number of demonstrations&lt;/h2&gt;
+&lt;p&gt;Two things account for the gains: the labelled examples in the prompt, and the
+strength of the base model. Neither involves any handling of class imbalance.
+Holding the model fixed at Gemini 3.1 Flash Lite, adding the ten examples per
+type moves overall macro-F1 from 60.6 to 80.0, a gain of 19.4 and the largest
+single change in this test. Most of it is recall: micro recall rises from 55.3 to
+77.5 and micro precision from 68.6 to 81.9. Holding the demonstrations fixed and
+substituting a newer model generation raises macro-F1 further to 90.9. These
+runs use the compact demonstration set introduced above, which is why the end
+point sits slightly above the 90.6 the same model reaches on the paper's set.&lt;/p&gt;
+&lt;p&gt;We then ran the identical prompt through two open-source models under our own control,
+holding the in-context supervision, the prompt, and the schema fixed and varying
+only the model.&lt;/p&gt;
+&lt;figure&gt;
+  &lt;img src=&#34;/media/post/slot-filling-llm-revisit/en/fig-capacity.png&#34; alt=&#34;Macro-F1 by frequency group across Qwen3-8B, Qwen3.6-27B and Gemini 3.5 Flash under an identical prompt.&#34; loading=&#34;lazy&#34; /&gt;
+  &lt;figcaption&gt;Identical labels, prompt, and schema across three model classes; each curve is one frequency group (see the legend). Capacity moves every group, and the rare group remains the weakest at all three scales.&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;Overall macro-F1 rises monotonically: 55.9, 87.8, and 90.6. Qwen3.6-27B, an
+open-source model quantised to six bits and served on two consumer GPUs, given the paper's
+exact labels in its prompt and nothing else, trails the hosted model by 2.8
+macro-F1 overall and stays level with the 2023 method on the common and
+mid-frequency groups, at 90.8 against 91.3 and 93.6 against 93.2. Its remaining gap to Gemini 3.5 Flash also concentrates on the rare
+group, where macro-F1 is 79.0 against 84.2, a difference of 5.2, whereas on the
+common group it is 90.8 against 92.3 and on the mid-frequency group 93.6 against
+95.1. Qwen3-8B is the useful contrast: its
+overall macro-F1 of 55.9 is far behind both, and it trails by a similar amount in
+all three frequency groups, so its weakness is general rather than specific to
+slot frequency. Few-shot prompting does not compensate for an insufficient base model in this
+comparison: reliable few-shot performance appears for Qwen3.6-27B but not for
+Qwen3-8B. The two runs differ in more than parameter count, so this result
+should not be read as a threshold on model scale alone.&lt;/p&gt;
+&lt;p&gt;We also swept the number of demonstrations from zero to ten per slot type. Eleven
+full-test-set runs were more than the budget allowed, so all eleven
+configurations were scored on one fixed subset of 50 test utterances, selected by greedy
+coverage so that each of the 39 slot types appears at least twice in it, 205 gold
+spans in total. That construction is what makes the rare group scorable at this
+size, since each rare type gets between two and six spans whereas 50 utterances
+drawn at random would contain almost none, and it is also what makes the subset a
+deliberately unrepresentative sample of the test set. Its absolute values are
+therefore not comparable to the full-test numbers reported everywhere else in
+this article, and only the shape of the curve carries information.&lt;/p&gt;
+&lt;figure&gt;
+  &lt;img src=&#34;/media/post/slot-filling-llm-revisit/en/fig-shots.png&#34; alt=&#34;Macro-F1 against the number of labelled examples per slot type, rising over the first four and then flattening.&#34; loading=&#34;lazy&#34; /&gt;
+  &lt;figcaption&gt;Macro-F1 against demonstrations per slot type. Most of the available gain arrives within the first few examples. The subset is small and weighted toward rare types, and each point is a single pass, so only the general trend should be read.&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;The curve rises over the first few examples per type and then flattens: most of
+what the demonstrations carry arrives early, and past that point additional
+examples mainly cost prompt tokens without improving accuracy. The rise
+is steepest on the rare group, which is consistent with the interpretation that
+the demonstrations convey the corpus's annotation conventions and output
+format rather than vocabulary alone, in line with the broader finding that
+demonstrations communicate the label space and format as well as the labels
+themselves (Min et al., 2022). Prior work reports cases in which accuracy declines once the number
+of demonstrations passes a model-dependent point, an effect termed
+over-prompting (Tang et al., 2025), while other
+studies find continued gains from many-shot prompts (Agarwal et al., 2024; Zhang
+et al., 2026). Up to the 390 demonstration utterances used here we observe no
+degradation, so at least within the range of this experiment over-prompting is
+not visible; one pass per point is, however, too coarse to locate an optimum.&lt;/p&gt;
+&lt;h2&gt;Behaviour without demonstrations&lt;/h2&gt;
+&lt;p&gt;Evaluated with no examples at all, the models separate sharply around the
+memorisation baseline of 65.6.&lt;/p&gt;
+&lt;p&gt;Five models fall below it, for two distinct reasons. DeepSeek-R1-Distill-Qwen-7B
+reaches a macro-F1 of only 9.3: a quarter of its output uses slot names that do
+not exist in the schema, such as &lt;code&gt;weather&lt;/code&gt;, &lt;code&gt;song&lt;/code&gt;, and &lt;code&gt;book&lt;/code&gt;, and a few
+responses deliberate for so long that they exceed the output limit and parse to
+nothing. Qwen3-8B reaches a macro-F1 of 16.8, with roughly one in seven of its
+responses failing to parse, mostly because the predicted character offsets fall
+outside the utterance. Neither number measures task competence; both show that a bare schema
+is not enough to constrain the output format. Kimi K2.5 is the more informative
+case. It produces no out-of-schema types, no truncation, and clean parses, yet
+its macro-F1 is 57.1, because it finds too few spans: micro precision is 65.3
+while micro recall is 51.8. That is a genuine task result, and it shows that a capable model
+of that generation, prompted without examples, still scores below a lookup table
+with access to the full training data. Qwen3.6-27B at 59.1 and Gemini 3.1 Flash
+Lite at 60.6 also land below the baseline, and both rise well above it once
+demonstrations enter the prompt.&lt;/p&gt;
+&lt;p&gt;The current frontier tier changes this. Gemini 3.6 Flash and Gemini 3.1 Pro,
+evaluated zero-shot with both one utterance per request and ten batched per
+request, land between 80.2 and 82.2 macro-F1 across all four runs and clear the
+memorisation lookup table in every frequency group, by 11 to 19 macro-F1
+depending on group and run. The best of them exceeds the 2023
+fine-tuned tagger on micro-F1, at 84.8 against 81.7, with no labelled examples at
+all. Neither the model tier nor the change from one utterance to ten utterances per
+request separates these two models by much. Sending one utterance per request,
+Gemini 3.1 Pro reaches 82.2 macro-F1 against Gemini 3.6 Flash's 80.2; with ten
+utterances per request they reach 81.5 and 81.3, so the tier that is ahead with
+one utterance per request is level in the batched configuration.&lt;/p&gt;
+&lt;p&gt;Zero-shot prompting does not close the gap on rare categories. Across
+the four runs the rare group's macro-F1 sits between 66.0 and 72.2, against 84.8
+for the 2023 method, and the step from the Flash tier to the Pro tier moves it
+very little. What moved the rare group in this study was demonstrations entering
+the prompt. The open-source Qwen3.6-27B
+reproduces the same split from the other side: with identical weights on
+identical hardware, its macro-F1 is 59.1 without demonstrations, below the
+memorisation baseline, and 87.8 with them.&lt;/p&gt;
+&lt;p&gt;Two further notes concern cost. Reasoning tokens dominated the hosted
+zero-shot runs, accounting for 80 to 93 per cent of output tokens; at the batch
+rates used here, a full run cost between $0.94 and $3.90. Enabling thinking
+mode on the local 27B raised paired micro-F1 from 53.2 to 63.8 on a
+22-utterance probe, mostly through recall, but raised the time per utterance
+from 5.9 to 260 seconds. That is
+a 44-fold slowdown, projecting to roughly fifty hours for the test set on this
+hardware, with 9 per cent of items exhausting the token budget mid-deliberation
+and returning nothing. The gain is real, but the inference cost is heavy.&lt;/p&gt;
+&lt;h2&gt;Decomposition of the residual errors&lt;/h2&gt;
+&lt;p&gt;Aggregate F1 does not show why a model loses points, so beyond the overall
+metric we classified every prediction and every gold span individually. Each gold span is
+compared with every predicted span in the same utterance, two spans counting as
+overlapping when they share at least one token, and is assigned the first of
+five outcomes it satisfies, illustrated here with cases drawn from the runs:
+(1) found exactly, with type and boundaries both matching; (2) right type, wrong
+boundaries, as when &lt;code&gt;condition_description&lt;/code&gt; is placed on &amp;quot;cloud coverage&amp;quot; where
+the annotation marks only &amp;quot;cloud&amp;quot;; (3) right boundaries, wrong type, as when an
+&lt;code&gt;album&lt;/code&gt; is labelled &lt;code&gt;track&lt;/code&gt;; (4) both wrong; (5) never found at all. A sixth
+outcome is visible only on the prediction side: the model outputs a span that
+matches nothing in the gold annotation.&lt;/p&gt;
+&lt;p&gt;We applied this classification to the three models that ran the identical prompt,
+over the same 150 rare-group gold spans.&lt;/p&gt;
+&lt;figure&gt;
+  &lt;img src=&#34;/media/post/slot-filling-llm-revisit/en/fig-errors.png&#34; alt=&#34;Decomposition of the 150 rare-group gold spans into found-exactly, boundary errors, type errors, both-wrong, and never-found, for Qwen3-8B, Qwen3.6-27B, and Gemini 3.5 Flash.&#34; loading=&#34;lazy&#34; /&gt;
+  &lt;figcaption&gt;Outcome of each of the 150 rare-group gold spans under the identical prompt. The larger models find nearly every one of them; what they lose comes from imprecise boundaries and from extra rare-type predictions that match no rare gold span, not from failing to find the spans.&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;The asymmetry is the finding. Gemini 3.5 Flash finds every one of the 150
+rare-group gold spans and recovers 136 of them exactly, so its loss comes from
+labelling rather than from searching: 14 spans it locates but types or delimits
+imperfectly, and the 25 of its 173 rare-type predictions that match no rare gold
+span. Almost all of those 25 are not inventions but disagreements with the
+annotation scheme: the same words are annotated in the gold data under a
+different, usually more generic, label. In &lt;em&gt;&amp;quot;play the album journeyman&amp;quot;&lt;/em&gt;, the
+model tags &amp;quot;journeyman&amp;quot; as &lt;code&gt;album&lt;/code&gt;, while SNIPS annotates it as &lt;code&gt;object_name&lt;/code&gt;,
+its generic title slot; only
+one of the 25 marks text that carries no annotation at all. Qwen3.6-27B behaves
+similarly, with two gold spans missed and 23 such predictions out of 168.
+Qwen3-8B differs in kind: 26 boundary errors, seven gold spans it never marks,
+and 95 of its 237 predictions matching no rare gold span.&lt;/p&gt;
+&lt;p&gt;The failure the 2023 method targets is rare-to-frequent relabelling, in which
+a span of a rare slot type receives a frequent label. We count a rare gold span
+as absorbed when the model recovers its boundaries exactly but assigns a common
+or mid-frequency type. By that definition, the relabelling occurs once for
+Qwen3-8B and never for Qwen3.6-27B
+or Gemini 3.5 Flash, out of 150 spans each. Relaxing the definition to any
+overlapping prediction carrying a frequent label raises the counts to 16, 3, and
+2, and even the 8B's 16 cases are mostly spans whose boundaries it also got
+wrong. This suggests general weakness rather than the drift of the decision
+boundary between common and rare classes that the paper describes.&lt;/p&gt;
+&lt;figure&gt;
+  &lt;img src=&#34;/media/post/slot-filling-llm-revisit/en/fig-confusion.png&#34; alt=&#34;Three confusion matrices over Playlist, Artist, Track, and Album, showing that self-training without rebalancing leaks rare Album spans into common slots, that the 2023 method removes that leakage, and that the prompted model leaks nothing into common slots while showing the same rare-to-rare residual in the opposite direction.&#34; loading=&#34;lazy&#34; /&gt;
+  &lt;figcaption&gt;The same four music slots under three systems, as proportions of detected spans. Left: rare &lt;code&gt;Album&lt;/code&gt; relabelled as common slots, the failure the 2023 method was built to remove. Centre: the 2023 method removes that leakage, with a residual confusion left between the two rare slots. Right: the prompted model relabels nothing into the common slots and shows the same rare-to-rare confusion in the opposite direction. The left and centre proportions are read from the original paper's figure; the prompted model's rare rows rest on nine detected spans each and should be read for the direction of the confusion only, not for the exact proportions.&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;The remaining errors fall into two kinds. Errors of localisation improve with
+model capacity: from Qwen3-8B to Qwen3.6-27B to Gemini 3.5 Flash, boundary errors
+fall from 26 to 13 to 5, gold spans never found from 7 to 2 to 0, and predictions
+matching no rare gold span from 95 to 23 and 25 for the two larger models. Errors of type do not improve at all: across a roughly 3.4-fold difference in
+parameter count and a change of model family, their counts are 5, 7, and 6, and they
+involve the same few pairs each time: &lt;code&gt;album&lt;/code&gt; against &lt;code&gt;track&lt;/code&gt;, &lt;code&gt;cuisine&lt;/code&gt; against
+&lt;code&gt;served_dish&lt;/code&gt;, &lt;code&gt;poi&lt;/code&gt; against &lt;code&gt;restaurant_name&lt;/code&gt;. In this test the
+imbalance among the in-context examples did not produce the amplified imbalance
+that self-training did.&lt;/p&gt;
+&lt;p&gt;All three of Gemini's album-against-track errors occur in the same frame: an
+album title inside a request to play something, as in &lt;em&gt;&amp;quot;play how does it work by
+helen carter&amp;quot;&lt;/em&gt;. The span is located exactly, but the correct label cannot be
+derived from the utterance, because whether &amp;quot;how does it work&amp;quot; is an album or a
+track is a fact about a discography that the prompt never supplies. The 2023
+method carries the same residual in the opposite direction, predicting track as
+album at the same rate, a third of the detected spans in each direction. Every system in this comparison, across three years and
+a wide range of scale, is stuck on the same pair of labels; that is what one
+expects when the difficulty resides in the label scheme rather than in any
+model.&lt;/p&gt;
+&lt;h2&gt;Two definitions of rarity&lt;/h2&gt;
+&lt;p&gt;The original paper defines rarity as a property of the labelled training set,
+namely how often a slot type occurs in the data the model is permitted to learn
+from. For a model trained only on that data, this count is the entire evidence
+available, so imbalance in the count is imbalance in competence and correcting it
+is the appropriate intervention.&lt;/p&gt;
+&lt;p&gt;For a large pretrained model the operative quantity appears to be different.
+Existing work ties few-shot competence to how often the terms involved appear in
+the pretraining corpus (Razeghi et al., 2022; Kandpal et al., 2023), and
+documents per-class accuracy imbalance in prompted language models that
+persists across architectures and data scaling (Lin and You, 2024). The slot
+types SNIPS treats as rare (album, track, playlist) refer to concepts that are
+common in general text, so rarity in the annotation budget need not imply
+comparable rarity in pretraining; these types may be rare only in the first
+sense. The error decomposition across the three
+models is consistent with this reading, since their deficit on the rare group
+sits in span boundaries, extra predictions, and a small number of ambiguous type
+pairs, with rare-to-frequent relabelling at or near zero even for the 8B
+model. We did not measure any model's pretraining data, so this remains a
+hypothesis consistent with the results rather than a conclusion established by
+them; a direct test would require labels whose pretraining
+frequency is controlled by construction, or a small model pretrained on a known
+corpus.&lt;/p&gt;
+&lt;h2&gt;Practical implications&lt;/h2&gt;
+&lt;p&gt;Where the full label budget is available, a small fine-tuned tagger should remain
+in the comparison. It was the strongest system in this study, with macro-F1 at
+95.0 against the prompted model's 90.6, and is substantially cheaper to serve. The prompted model is
+the appropriate choice in the label-scarce middle rather than in the general case.&lt;/p&gt;
+&lt;p&gt;Where a few hundred labels are available, placing them in the prompt is a
+credible first system, requiring neither a training loop nor pseudo-labelling
+infrastructure, provided the base model clears the capability threshold. That
+threshold should be tested first, because below it none of the prompt
+configurations we tried recovered the result.&lt;/p&gt;
+&lt;p&gt;The first labels are better spent covering every category than deepening any one
+of them, since the demonstration curve flattens early and the examples appear to convey
+annotation conventions and output format more than vocabulary. Diagnosis
+should be conducted at the span level rather than at the level of aggregate F1.
+The most actionable conclusions in this study came from counting individual
+predictions, which is what made the differences between models concretely
+explainable; the aggregate scores showed that rare types remained weakest, but
+did not by themselves reveal the mechanism.&lt;/p&gt;
+&lt;p&gt;Finally, the error taxonomy points at localisation rather than rebalancing. The
+errors that actually remain are misplaced boundaries and confidently predicted
+extra spans. Two remedies match them. The first is to constrain what the model is
+allowed to emit, so that a prediction can only be a span present in the utterance
+carrying a label present in the schema. The prompted-extraction work discussed
+here does not generally enforce that at decoding time; GPT-NER gets part of the way by
+turning sequence labelling into generation, having the model mark entities inline
+in a copy of the input (Wang et al., 2025). The second is an explicit rejection
+step that suppresses predictions over text the schema does not intend to cover,
+which the same literature has converged on under several names: candidate-level
+decisions about whether a proposed span satisfies the entity definition (Ashok
+and Lipton, 2023), reflection over error-prone tokens (Bai et al., 2025), and
+contrastive examples labelled with the cause of the error (You et al., 2026). A
+portion of the residual is a property of the schema rather than of the model:
+when two labels can both truthfully describe a span and only an internal
+convention decides between them, the choice cannot be reliably recovered from the
+utterance alone.
+The remedy is to state the convention, revise the schema, or attach a knowledge
+source.&lt;/p&gt;
+&lt;h2&gt;Limitations&lt;/h2&gt;
+&lt;p&gt;Every language-model configuration is a single run, compared against five-seed
+published means. The set of models is a convenience sample, and the internals and
+versioning of the hosted models are only partly visible. The comparison among the
+open-source models varies inference engine and quantisation alongside parameter
+count, so it is not a clean ablation of model size. The demonstration sweep is one pass per
+point on a small subset deliberately weighted toward rare types, and supports the
+shape of the curve only. One further caution: in most language-model runs the
+ordering across frequency groups is not monotonic, as the mid-frequency group
+scores higher than the common group. The gap between the common and rare groups
+in these runs is therefore not the same quantity as the rare-slot gap the
+original paper measures, where scores fell in step with training frequency.
+SNIPS is also a small and long-public benchmark, portions of which have plausibly
+been observed during pretraining, which is precisely the confound discussed in
+the section on the two definitions of rarity.&lt;/p&gt;
+&lt;h2&gt;Concluding remarks&lt;/h2&gt;
+&lt;p&gt;The contribution of the original work stands within the regime it addresses.
+Where a model must be learned from a few labels and an unlabelled
+pool without a large pretrained prior, which remains the operative constraint for
+many private, domain-specific, and lower-resource deployments, self-training does
+amplify imbalance and imbalance-aware correction does measurably counter it.&lt;/p&gt;
+&lt;p&gt;What changes is the diagnosis of when that machinery is the right instrument.
+Transferred onto a prompted language model, it would target an error these
+models largely do not show in our runs. Rare categories remain the weakest
+group, but in our error analysis the remaining weaknesses are dominated by
+three patterns, none of them imbalance. The model's span boundaries do not line
+up with the annotators'. It puts labels on text that SNIPS annotates under a
+different slot, or does not annotate at all. And a few pairs of categories,
+&lt;code&gt;album&lt;/code&gt; against &lt;code&gt;track&lt;/code&gt; above all, cannot be decided reliably from the input.
+The symptom is preserved, but the mechanism appears different in these runs,
+and the distinction is worth establishing before selecting a remedy.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;Appendix: all reported figures&lt;/h2&gt;
+&lt;p&gt;Full test set of 700 utterances unless noted, macro-F1 across all 39 slot types.&lt;/p&gt;
+&lt;p&gt;Reference points: memorisation lookup table 65.6; tagger fine-tuned on ten
+examples per type 82.9; imbalance-aware self-training 89.7; tagger fine-tuned on
+the full training set 95.0.&lt;/p&gt;
+&lt;p&gt;Without demonstrations: DeepSeek-R1-Distill-Qwen-7B 9.3; Qwen3-8B 16.8; Kimi K2.5
+57.1; Qwen3.6-27B 59.1; Gemini 3.1 Flash Lite 60.6; Gemini 3.6 Flash 80.2 and
+81.3; Gemini 3.1 Pro 82.2 and 81.5. Paired values are one utterance per request
+against ten batched per request.&lt;/p&gt;
+&lt;p&gt;With ten demonstrations per slot type: Qwen3-8B 55.9 and Qwen3.6-27B 87.8 on the
+paper's demonstration set; Gemini 3.1 Flash Lite 80.0 on the compact set; Gemini
+3.5 Flash 90.6 on the paper's set and 90.9 on the compact set.&lt;/p&gt;
+&lt;h2&gt;References&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Agarwal, R., Singh, A., Zhang, L. M., et al. 2024. Many-shot in-context
+learning. &lt;em&gt;NeurIPS 2024&lt;/em&gt;. arXiv:2404.11018.&lt;/li&gt;
+&lt;li&gt;Ashok, D. and Lipton, Z. C. 2023. PromptNER: Prompting for named entity
+recognition. arXiv:2305.15444.&lt;/li&gt;
+&lt;li&gt;Bai, F., Hassanzadeh, H., Saeedi, A., and Dredze, M. 2025. LLMs are better
+than you think: Label-guided in-context learning for named entity
+recognition. &lt;em&gt;EMNLP 2025&lt;/em&gt;. arXiv:2505.23722.&lt;/li&gt;
+&lt;li&gt;Brown, T. B., et al. 2020. Language models are few-shot learners. &lt;em&gt;NeurIPS
+2020&lt;/em&gt;. arXiv:2005.14165.&lt;/li&gt;
+&lt;li&gt;Coucke, A., et al. 2018. Snips Voice Platform: An embedded spoken language
+understanding system for private-by-design voice interfaces. arXiv:1805.10190.&lt;/li&gt;
+&lt;li&gt;Gao, H., Zhang, F., Zeng, H., Meng, D., Jing, B., and Wei, H. 2025.
+Exploring imbalanced annotations for effective in-context learning. arXiv
+preprint arXiv:2502.04037.&lt;/li&gt;
+&lt;li&gt;Kandpal, N., Deng, H., Roberts, A., Wallace, E., and Raffel, C. 2023. Large
+language models struggle to learn long-tail knowledge. &lt;em&gt;ICML 2023&lt;/em&gt;.
+arXiv:2211.08411.&lt;/li&gt;
+&lt;li&gt;Liang, C., Yu, Y., Jiang, H., Er, S., Wang, R., Zhao, T., and Zhang, C. 2020.
+BOND: BERT-assisted open-domain named entity recognition with distant
+supervision. &lt;em&gt;KDD 2020&lt;/em&gt;. arXiv:2006.15509.&lt;/li&gt;
+&lt;li&gt;Lin, R. and You, Y. 2024. Optimizing class-level probability reweighting
+coefficients for equitable prompting accuracy. arXiv preprint
+arXiv:2405.07623.&lt;/li&gt;
+&lt;li&gt;Liu, J., Xiong, S., He, Y., Zhou, T., Wang, L., Li, X., and Xiao, B. 2023.
+SIAST: A slot imbalance-aware self-training scheme for semi-supervised slot
+filling. &lt;em&gt;ICASSP 2023&lt;/em&gt;. DOI 10.1109/ICASSP49357.2023.10096302.&lt;/li&gt;
+&lt;li&gt;Min, S., Lyu, X., Holtzman, A., Artetxe, M., Lewis, M., Hajishirzi, H., and
+Zettlemoyer, L. 2022. Rethinking the role of demonstrations: What makes
+in-context learning work? &lt;em&gt;EMNLP 2022&lt;/em&gt;. arXiv:2202.12837.&lt;/li&gt;
+&lt;li&gt;Razeghi, Y., Logan IV, R. L., Gardner, M., and Singh, S. 2022. Impact of
+pretraining term frequencies on few-shot numerical reasoning. &lt;em&gt;Findings of
+EMNLP 2022&lt;/em&gt;. arXiv:2202.07206.&lt;/li&gt;
+&lt;li&gt;Tang, Y., Tuncel, D., Koerner, C., and Runkler, T. 2025. The few-shot
+dilemma: Over-prompting large language models. &lt;em&gt;IEEE FLLM 2025&lt;/em&gt;.
+arXiv:2509.13196.&lt;/li&gt;
+&lt;li&gt;Wang, S., Sun, X., Li, X., Ouyang, R., Wu, F., Zhang, T., Li, J., Wang, G.,
+and Guo, C. 2025. GPT-NER: Named entity recognition via large language
+models. &lt;em&gt;Findings of NAACL 2025&lt;/em&gt;, pp. 4257–4275. arXiv:2304.10428. DOI
+10.18653/v1/2025.findings-naacl.239.&lt;/li&gt;
+&lt;li&gt;Wang, Y., Mukherjee, S., Chu, H., Tu, Y., Wu, M., Gao, J., and Hassan
+Awadallah, A. 2021. Meta self-training for few-shot neural sequence labeling.
+&lt;em&gt;KDD 2021&lt;/em&gt;, pp. 1737–1747. arXiv:2010.03680.&lt;/li&gt;
+&lt;li&gt;You, X., Yan, T., and Zhao, S. 2026. LC-ICL: Label-guided contrastive
+in-context learning for robust information extraction. arXiv preprint
+arXiv:2606.29407.&lt;/li&gt;
+&lt;li&gt;Zhang, Q., Lan, F., Caragea, C., Latecki, L. J., and Dragut, E. 2026. Scaling
+performance and low-resource annotation with many-shot in-context learning
+for named entity recognition. &lt;em&gt;Findings of ACL 2026&lt;/em&gt;. arXiv:2606.21890.&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>Hello World</title>
