@@ -17,7 +17,10 @@
       <link>https://www.heyuehuan.com/post/slot-filling-llm-revisit/</link>
       <pubDate>Sat, 15 Aug 2026 00:00:00 +0000</pubDate>
       <guid>https://www.heyuehuan.com/post/slot-filling-llm-revisit/</guid>
-      <description>&lt;p&gt;&lt;em&gt;In 2023 we published a semi-supervised method for slot filling that corrected a
+      <description>&lt;figure&gt;
+  &lt;img src=&#34;/media/post/slot-filling-llm-revisit/en/fig-summary.jpg&#34; alt=&#34;Revisit SIAST: slot filling under modern LLMs. The rare-to-frequent label collapse is largely gone, and Gemini 3.5 Flash reaches 90.6 macro-F1 against the 2023 method's 89.7, with no fine-tuning and ten examples per slot type in the prompt.&#34; width=&#34;1600&#34; height=&#34;835&#34; /&gt;
+&lt;/figure&gt;
+&lt;p&gt;&lt;em&gt;In 2023 we published a semi-supervised method for slot filling that corrected a
 label-imbalance failure common in real data: when a model is trained on a small
 labelled set and then retrained on its own predictions, the rare categories are
 progressively absorbed by the frequent ones, and the resulting model performs
